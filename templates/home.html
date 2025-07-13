@@ -280,7 +280,9 @@
           </div>
           <div class="right">
             {% if 'user_id' in session %}
-              <a href="{{ url_for('request_skill', user_id=user.id) }}" class="req-btn">Request Swap</a>
+          <a href="{{ url_for('user_detail', user_id=user.id) }}" class="req-btn">View Profile</a>
+
+
             {% else %}
               <a href="/login" class="req-btn">Login to Request</a>
             {% endif %}

@@ -341,6 +341,64 @@ def logout():
     session.pop('user_id', None)
     flash('You have logged out.', 'info')
     return redirect(url_for('home'))
+@app.route('/user/<int:user_id>', methods=['GET', 'POST'])
+def user_detail(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if request.method == 'POST':
+        if 'user_id' not in session:
+            flash('You must be logged in to submit a review.', 'error')
+            return redirect(url_for('login'))
+
+        rating = request.form.get('rating')
+        if not rating or not rating.isdigit() or int(rating) < 1 or int(rating) > 5:
+            flash('Invalid rating.', 'error')
+            return redirect(url_for('user_detail', user_id=user_id))
+
+        rating = int(rating)
+
+        # Calculate new average rating
+        if user.rating == 0:
+            user.rating = rating
+        else:
+            user.rating = round((user.rating + rating) / 2, 1)
+
+        db.session.commit()
+        flash('Review submitted!', 'success')
+        return redirect(url_for('user_detail', user_id=user_id))
+
+    return render_template('user_detail.html', user=user)
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_photo():
+    if 'user_id' not in session:
+        flash('Please login to upload photo.', 'error')
+        return redirect(url_for('login'))
+
+    user = User.query.get(session['user_id'])
+
+    if request.method == 'POST':
+        if 'photo' not in request.files:
+            flash('No file part', 'error')
+            return redirect(url_for('upload_photo'))
+
+        file = request.files['photo']
+
+        if file.filename == '':
+            flash('No selected file', 'error')
+            return redirect(url_for('upload_photo'))
+
+        if file and file.filename != '' and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            unique_filename = f"{user.email.split('@')[0]}_{filename}"
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
+            user.photo_filename = unique_filename
+
+            db.session.commit()
+            flash('Profile photo updated!', 'success')
+            return redirect(url_for('profile'))
+
+    return render_template('upload_photo.html', user=user)
+
 
 if __name__ == '__main__':
     with app.app_context():
